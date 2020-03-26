@@ -86,6 +86,7 @@ func processTask(msg *stan.Msg) {
 
 }
 
+//todo 这块处理函数可以暴露给调用者来具体编写爬取业务，可以考虑采用模板方法设计模式。对外暴露接口
 func processHelper(bytes []byte) {
 	rootUrl := string(bytes)
 	//拿url的html，解析总页数，生成其他页码的url存入临时list，接下来就是分别访问这些url，然后保存所需要的搜索结果源url。
