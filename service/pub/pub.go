@@ -34,9 +34,11 @@ func Init(clusterID, clientID string) {
 
 func getList() []string {
 	prefix := "https://www.baidu.com/s?wd=go"
+	prefix2 := "https://www.google.com/s?wd=go"
 	var urls []string
 	for i := 0; i < 10; i++ {
 		urls = append(urls, prefix+strconv.Itoa(i))
+		urls = append(urls, prefix2+strconv.Itoa(i))
 	}
 
 	return urls

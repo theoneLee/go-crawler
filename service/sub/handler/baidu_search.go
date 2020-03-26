@@ -9,6 +9,10 @@ import (
 	"time"
 )
 
+//todo 新增一个新的爬取网址，
+// 只需要在factory构造一个的XXXConsumer和
+// 新建一个go文件定义一个新的XXXConsumer，实现Implement接口（即Process(bytes []byte)
+
 type BaiduConsumer struct {
 	*template_pkg.Template
 }
