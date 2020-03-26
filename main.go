@@ -1,8 +1,8 @@
 package main
 
 import (
-	"go-crawler/app/service/pub"
-	"go-crawler/app/service/sub"
+	"go-crawler/service/pub"
+	"go-crawler/service/sub"
 	"time"
 )
 
@@ -12,8 +12,8 @@ func main() {
 
 	//go sub.Init2(clusterID,"server1")
 
-	go sub.Init(clusterID, "server1")
-	go sub.Init(clusterID, "server2") //允许有任意多个处理节点（sub）
+	go sub.Init3(clusterID, "server1")
+	//go sub.Init3(clusterID, "server2") //允许有任意多个处理节点（sub）
 
 	time.Sleep(100 * time.Millisecond)
 	go pub.Init(clusterID, "client")

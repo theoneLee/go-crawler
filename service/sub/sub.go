@@ -2,18 +2,15 @@ package sub
 
 import (
 	"fmt"
+	"go-crawler/service/sub/eumn"
+	"go-crawler/service/sub/factory"
+	"log"
 	"math/rand"
 	"strconv"
 	"sync"
 	"time"
 )
 import "github.com/nats-io/stan.go"
-
-var (
-	curCount = 0
-	maxCount = 2
-	rwMutex  = sync.RWMutex{}
-)
 
 // 速率匹配
 func Init(clusterID, clientID string) {
@@ -27,15 +24,15 @@ func Init(clusterID, clientID string) {
 
 	// Subscribe with manual ack mode and a max in-flight limit of 2
 	sc.Subscribe(subject, func(m *stan.Msg) {
-		rwMutex.Lock()
-		curCount++
-		fmt.Printf("[%s]Received message #: %s,count: %d \n", clientID, string(m.Data), curCount)
-		rwMutex.Unlock()
+		eumn.RwMutex.Lock()
+		eumn.CurCount++
+		fmt.Printf("[%s]Received message #: %s,count: %d \n", clientID, string(m.Data), eumn.CurCount)
+		eumn.RwMutex.Unlock()
 
 		go processTask(m)
 
 		// Message delivery will suspend when the number of unacknowledged messages reaches 2
-	}, stan.SetManualAckMode(), stan.MaxInflight(maxCount))
+	}, stan.SetManualAckMode(), stan.MaxInflight(eumn.MaxCount))
 }
 
 func Init2(clusterID, clientID string) {
@@ -49,25 +46,55 @@ func Init2(clusterID, clientID string) {
 
 	// Subscribe with manual ack mode and a max in-flight limit of 25
 	sc.Subscribe(subject, func(m *stan.Msg) {
-		rwMutex.RLock()
-		flag := curCount == maxCount
-		rwMutex.RUnlock()
+		eumn.RwMutex.RLock()
+		flag := eumn.CurCount == eumn.MaxCount
+		eumn.RwMutex.RUnlock()
 		if flag {
 			//不去ack,等到goprocess处理完毕再ack todo 这里实际上是已经接受到消息了，但是没有ack，直到触发ack未回复的超时后重发消息从而保证每个消息都处理了(前提是pub使用同步方式投递消息)；正确限流(速率匹配的)的用法应该看上面Init的用法，而不是自己手动设置变量来控制。
-			fmt.Println("wait:", string(m.Data), curCount)
+			fmt.Println("wait:", string(m.Data), eumn.CurCount)
 		} else {
-			rwMutex.Lock()
-			curCount++
-			fmt.Printf("Received message #: %s,count: %d \n", string(m.Data), curCount)
+			eumn.RwMutex.Lock()
+			eumn.CurCount++
+			fmt.Printf("Received message #: %s,count: %d \n", string(m.Data), eumn.CurCount)
 			//err := m.Ack()
 			//if err != nil {
 			//	panic(err)
 			//}
-			rwMutex.Unlock()
+			eumn.RwMutex.Unlock()
 			go processTask(m)
 		}
 
 	}, stan.SetManualAckMode())
+}
+
+// 速率匹配 模板方法
+func Init3(clusterID, clientID string) {
+	//clusterID := "cluster-crawler-server"
+	//clientID := "server1"
+	sc, err := stan.Connect(clusterID, clientID)
+	if err != nil {
+		panic(err)
+	}
+	subject := "crawler_task"
+
+	// Subscribe with manual ack mode and a max in-flight limit of 2
+	sc.Subscribe(subject, func(m *stan.Msg) {
+		eumn.RwMutex.Lock()
+		eumn.CurCount++
+		fmt.Printf("[%s]Received message #: %s,count: %d \n", clientID, string(m.Data), eumn.CurCount)
+		eumn.RwMutex.Unlock()
+
+		//todo 根据消息类别创建不同的Consumer
+		consumer, err := factory.GetConsumer(m)
+		if err == nil {
+			go consumer.Consume(m)
+		} else {
+			log.Println(err)
+			m.Ack()
+		}
+
+		// Message delivery will suspend when the number of unacknowledged messages reaches 2
+	}, stan.SetManualAckMode(), stan.MaxInflight(eumn.MaxCount))
 }
 
 func processTask(msg *stan.Msg) {
@@ -75,10 +102,10 @@ func processTask(msg *stan.Msg) {
 	processHelper(msg.Data)
 
 	//ack and recount when process finish
-	rwMutex.Lock()
-	curCount--
-	fmt.Println("processTask fin:", string(msg.Data), "count:", curCount)
-	rwMutex.Unlock()
+	eumn.RwMutex.Lock()
+	eumn.CurCount--
+	fmt.Println("processTask fin:", string(msg.Data), "count:", eumn.CurCount)
+	eumn.RwMutex.Unlock()
 	err := msg.Ack()
 	if err != nil {
 		panic(err)
