@@ -26,6 +26,8 @@ func fanOut(clusterID string) { //fan out，一个消息会在多个处理节点
 
 func queueGroup(clusterID string) {
 	//	https://github.com/nats-io/stan.go#queue-groups
-	go sub.Init4(clusterID, "server1")
-	go sub.Init4(clusterID, "server2") //允许有任意多个处理节点（sub）
+	go sub.Init4(clusterID, "server1") //clientID由运行时environment传入
+	go sub.Init4(clusterID, "server2")
+	//允许有任意多个处理节点（sub）,实际上在分布式环境中这些函数应该是独立一个应用来运行的.因此可能存在旧节点和新节点的情况
+
 }

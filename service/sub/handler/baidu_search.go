@@ -57,7 +57,7 @@ func getUrls(s string) []string {
 }
 
 func parse(url string) {
-	//todo 保存url的html
+	//todo 保存url的html, 以爬取的url为主键，sql的使用replace，保证其最后的操作会覆盖之前的数据。
 
 	//这里模拟请求即可
 	rand.Seed(time.Now().UnixNano())

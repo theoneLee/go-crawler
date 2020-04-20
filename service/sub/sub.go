@@ -5,6 +5,7 @@ import (
 	"go-crawler/service/sub/eumn"
 	"go-crawler/service/sub/factory"
 	"log"
+	"time"
 )
 import "github.com/nats-io/stan.go"
 
@@ -62,7 +63,10 @@ func Init4(clusterID, clientID string) {
 			go consumer.Consume(m)
 		} else {
 			log.Println(err)
-			m.Ack()
+			//m.Ack() //如果自己处理不了该url，要么就是真的没写对应的处理函数，要么就是旧节点，如果是旧节点，就优雅退出。
+			m.Sub.Unsubscribe()
+			sc.Close()
+			time.Sleep(10 * time.Second)
 		}
 
 		// Message delivery will suspend when the number of unacknowledged messages reaches 2
